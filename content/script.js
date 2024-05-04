@@ -1,4 +1,4 @@
-import init, { Cartridge, WasmPlayer } from "./wasm/wasm-player.js";
+import init, { Cartridge, WasmPlayer } from "./wasm/player/wasm-player.js";
 await init();
 
 const AUDIO_SAMPLE_RATE = 44100;

@@ -38,7 +38,7 @@ export class WasmPlayer {
 * where to send the frame data to.
 * @param {Cartridge} cartridge
 * @param {HTMLCanvasElement} canvas
-* @param {string | undefined} desired_device
+* @param {string | undefined} [desired_device]
 * @returns {WasmPlayer}
 */
   static create_with_cartridge(cartridge: Cartridge, canvas: HTMLCanvasElement, desired_device?: string): WasmPlayer;
@@ -107,8 +107,8 @@ export interface InitOutput {
   readonly __wbindgen_exn_store: (a: number) => void;
   readonly __wbindgen_add_to_stack_pointer: (a: number) => number;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
-  readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
   readonly __wbindgen_free: (a: number, b: number, c: number) => void;
+  readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
 }
 
 export type SyncInitInput = BufferSource | WebAssembly.Module;

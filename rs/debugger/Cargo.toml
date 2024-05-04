@@ -1,0 +1,17 @@
+[package]
+name = "wasm-debugger"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = [ "cdylib", "rlib" ]
+
+[dependencies]
+console_error_panic_hook = "0.1.7"
+eframe = "0.27.2"
+log = "0.4.21"
+wasm-bindgen = "0.2.92"
+wasm-bindgen-futures = "0.4.42"
+
+[dependencies.gemi-debugger]
+git = "https://github.com/ChristianFischer/gemi.git"

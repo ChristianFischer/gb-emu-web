@@ -1,23 +1,5 @@
 let wasm;
 
-const cachedTextDecoder = (typeof TextDecoder !== 'undefined' ? new TextDecoder('utf-8', { ignoreBOM: true, fatal: true }) : { decode: () => { throw Error('TextDecoder not available') } } );
-
-if (typeof TextDecoder !== 'undefined') { cachedTextDecoder.decode(); };
-
-let cachedUint8Memory0 = null;
-
-function getUint8Memory0() {
-    if (cachedUint8Memory0 === null || cachedUint8Memory0.byteLength === 0) {
-        cachedUint8Memory0 = new Uint8Array(wasm.memory.buffer);
-    }
-    return cachedUint8Memory0;
-}
-
-function getStringFromWasm0(ptr, len) {
-    ptr = ptr >>> 0;
-    return cachedTextDecoder.decode(getUint8Memory0().subarray(ptr, ptr + len));
-}
-
 const heap = new Array(128).fill(undefined);
 
 heap.push(undefined, null, true, false);
@@ -36,6 +18,24 @@ function takeObject(idx) {
     const ret = getObject(idx);
     dropObject(idx);
     return ret;
+}
+
+const cachedTextDecoder = (typeof TextDecoder !== 'undefined' ? new TextDecoder('utf-8', { ignoreBOM: true, fatal: true }) : { decode: () => { throw Error('TextDecoder not available') } } );
+
+if (typeof TextDecoder !== 'undefined') { cachedTextDecoder.decode(); };
+
+let cachedUint8Memory0 = null;
+
+function getUint8Memory0() {
+    if (cachedUint8Memory0 === null || cachedUint8Memory0.byteLength === 0) {
+        cachedUint8Memory0 = new Uint8Array(wasm.memory.buffer);
+    }
+    return cachedUint8Memory0;
+}
+
+function getStringFromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    return cachedTextDecoder.decode(getUint8Memory0().subarray(ptr, ptr + len));
 }
 
 function addHeapObject(obj) {
@@ -73,14 +73,30 @@ function getClampedArrayU8FromWasm0(ptr, len) {
     return getUint8ClampedMemory0().subarray(ptr / 1, ptr / 1 + len);
 }
 
+let WASM_VECTOR_LEN = 0;
+
+function passArray8ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 1, 1) >>> 0;
+    getUint8Memory0().set(arg, ptr / 1);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
+}
+
+let cachedInt32Memory0 = null;
+
+function getInt32Memory0() {
+    if (cachedInt32Memory0 === null || cachedInt32Memory0.byteLength === 0) {
+        cachedInt32Memory0 = new Int32Array(wasm.memory.buffer);
+    }
+    return cachedInt32Memory0;
+}
+
 function _assertClass(instance, klass) {
     if (!(instance instanceof klass)) {
         throw new Error(`expected instance of ${klass.name}`);
     }
     return instance.ptr;
 }
-
-let WASM_VECTOR_LEN = 0;
 
 const cachedTextEncoder = (typeof TextEncoder !== 'undefined' ? new TextEncoder('utf-8') : { encode: () => { throw Error('TextEncoder not available') } } );
 
@@ -129,19 +145,11 @@ function passStringToWasm0(arg, malloc, realloc) {
         const ret = encodeString(arg, view);
 
         offset += ret.written;
+        ptr = realloc(ptr, len, offset, 1) >>> 0;
     }
 
     WASM_VECTOR_LEN = offset;
     return ptr;
-}
-
-let cachedInt32Memory0 = null;
-
-function getInt32Memory0() {
-    if (cachedInt32Memory0 === null || cachedInt32Memory0.byteLength === 0) {
-        cachedInt32Memory0 = new Int32Array(wasm.memory.buffer);
-    }
-    return cachedInt32Memory0;
 }
 
 let cachedFloat32Memory0 = null;
@@ -163,12 +171,9 @@ function getArrayU8FromWasm0(ptr, len) {
     return getUint8Memory0().subarray(ptr / 1, ptr / 1 + len);
 }
 
-function passArray8ToWasm0(arg, malloc) {
-    const ptr = malloc(arg.length * 1, 1) >>> 0;
-    getUint8Memory0().set(arg, ptr / 1);
-    WASM_VECTOR_LEN = arg.length;
-    return ptr;
-}
+const CartridgeFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_cartridge_free(ptr >>> 0));
 /**
 * A wrapper around the internal cartridge type to expose it to the JS side.
 */
@@ -178,14 +183,14 @@ export class Cartridge {
         ptr = ptr >>> 0;
         const obj = Object.create(Cartridge.prototype);
         obj.__wbg_ptr = ptr;
-
+        CartridgeFinalization.register(obj, obj.__wbg_ptr, obj);
         return obj;
     }
 
     __destroy_into_raw() {
         const ptr = this.__wbg_ptr;
         this.__wbg_ptr = 0;
-
+        CartridgeFinalization.unregister(this);
         return ptr;
     }
 
@@ -263,6 +268,10 @@ export class Cartridge {
         return ret !== 0;
     }
 }
+
+const WasmPlayerFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_wasmplayer_free(ptr >>> 0));
 /**
 * Web Assembly frontend for the emulator.
 * This will be instantiated from JS provides an interface to the emulator backend.
@@ -273,14 +282,14 @@ export class WasmPlayer {
         ptr = ptr >>> 0;
         const obj = Object.create(WasmPlayer.prototype);
         obj.__wbg_ptr = ptr;
-
+        WasmPlayerFinalization.register(obj, obj.__wbg_ptr, obj);
         return obj;
     }
 
     __destroy_into_raw() {
         const ptr = this.__wbg_ptr;
         this.__wbg_ptr = 0;
-
+        WasmPlayerFinalization.unregister(this);
         return ptr;
     }
 
@@ -293,7 +302,7 @@ export class WasmPlayer {
     * where to send the frame data to.
     * @param {Cartridge} cartridge
     * @param {HTMLCanvasElement} canvas
-    * @param {string | undefined} desired_device
+    * @param {string | undefined} [desired_device]
     * @returns {WasmPlayer}
     */
     static create_with_cartridge(cartridge, canvas, desired_device) {
@@ -396,7 +405,7 @@ export class WasmPlayer {
                 throw takeObject(r2);
             }
             var v1 = getArrayF32FromWasm0(r0, r1).slice();
-            wasm.__wbindgen_free(r0, r1 * 4);
+            wasm.__wbindgen_free(r0, r1 * 4, 4);
             return v1;
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
@@ -416,7 +425,7 @@ export class WasmPlayer {
             let v1;
             if (r0 !== 0) {
                 v1 = getArrayU8FromWasm0(r0, r1).slice();
-                wasm.__wbindgen_free(r0, r1 * 1);
+                wasm.__wbindgen_free(r0, r1 * 1, 1);
             }
             return v1;
         } finally {
@@ -471,9 +480,6 @@ async function __wbg_load(module, imports) {
 function __wbg_get_imports() {
     const imports = {};
     imports.wbg = {};
-    imports.wbg.__wbindgen_throw = function(arg0, arg1) {
-        throw new Error(getStringFromWasm0(arg0, arg1));
-    };
     imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
         takeObject(arg0);
     };
@@ -481,26 +487,29 @@ function __wbg_get_imports() {
         const ret = getStringFromWasm0(arg0, arg1);
         return addHeapObject(ret);
     };
-    imports.wbg.__wbg_getContext_7c5944ea807bf5d3 = function() { return handleError(function (arg0, arg1, arg2) {
-        const ret = getObject(arg0).getContext(getStringFromWasm0(arg1, arg2));
-        return isLikeNone(ret) ? 0 : addHeapObject(ret);
-    }, arguments) };
-    imports.wbg.__wbg_instanceof_CanvasRenderingContext2d_bc0a6635c96eca9b = function(arg0) {
+    imports.wbg.__wbindgen_throw = function(arg0, arg1) {
+        throw new Error(getStringFromWasm0(arg0, arg1));
+    };
+    imports.wbg.__wbg_instanceof_CanvasRenderingContext2d_20bf99ccc051643b = function(arg0) {
         let result;
         try {
             result = getObject(arg0) instanceof CanvasRenderingContext2D;
-        } catch {
+        } catch (_) {
             result = false;
         }
         const ret = result;
         return ret;
     };
-    imports.wbg.__wbg_newwithu8clampedarrayandsh_e2b3fce567acd708 = function() { return handleError(function (arg0, arg1, arg2, arg3) {
+    imports.wbg.__wbg_getContext_df50fa48a8876636 = function() { return handleError(function (arg0, arg1, arg2) {
+        const ret = getObject(arg0).getContext(getStringFromWasm0(arg1, arg2));
+        return isLikeNone(ret) ? 0 : addHeapObject(ret);
+    }, arguments) };
+    imports.wbg.__wbg_putImageData_044c08ad889366e1 = function() { return handleError(function (arg0, arg1, arg2, arg3) {
+        getObject(arg0).putImageData(getObject(arg1), arg2, arg3);
+    }, arguments) };
+    imports.wbg.__wbg_newwithu8clampedarrayandsh_7f7f549e397591e0 = function() { return handleError(function (arg0, arg1, arg2, arg3) {
         const ret = new ImageData(getClampedArrayU8FromWasm0(arg0, arg1), arg2 >>> 0, arg3 >>> 0);
         return addHeapObject(ret);
-    }, arguments) };
-    imports.wbg.__wbg_putImageData_f157d52a70a206d5 = function() { return handleError(function (arg0, arg1, arg2, arg3) {
-        getObject(arg0).putImageData(getObject(arg1), arg2, arg3);
     }, arguments) };
 
     return imports;

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Debugging GameBoy ROMs</title>
+    <link rel="stylesheet" href="content/style.css" />
+
+    <style>
+        html, body, canvas {
+            height: 100%;
+            width: 100%;
+        }
+    </style>
+
+    <script type="module">
+        import debugger_init from './content/wasm/debugger/wasm-debugger.js';
+        debugger_init();
+    </script>
+</head>
+
+<body>
+    <canvas id="gemi_canvas"></canvas>
+</body>
+</html>
